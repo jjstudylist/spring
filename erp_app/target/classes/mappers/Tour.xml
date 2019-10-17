@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tour">
+
+
+	<!-- 투어 전체 리스트 select -->
+	<select id="selectTourList" resultType="com.erp.app.dto.TourDTO" >
+		SELECT 
+				NO,
+				COUNTRY,
+				CITY,
+				TITLE,
+				START_DATE,
+				END_DATE,
+				PRICE,
+				MAKE_ID,
+				MAKE_DATE
+		FROM TOUR
+	</select>
+
+	<!--투어 가능 날짜 -->
+	<select id="selectEnableDate" resultType="com.erp.app.dto.TourDTO" >
+		SELECT 
+				NO as no_tourDate,
+				TOUR_NO as tour_no,
+				DATE as date,
+				MAKE_ID as make_id_tourDate,
+				MAKE_TIME as make_time_tourDate
+		FROM TOUR_DATE
+		WHERE TOUR_NO = #{no}
+	</select>
+		
+	<!-- 해당 날짜에 대한 가능 좌석 -->
+	<select id="selectViewSeats" resultType="com.erp.app.dto.TourDTO" >
+		SELECT S.NO, S.TOUR_NO, S.DATE_NO, S.ORDER_TYPE
+		FROM TOUR_SEAT S LEFT OUTER JOIN TOUR_DATE D
+		ON S.DATE_NO = D.NO
+		WHERE S.TOUR_NO IN (SELECT NO FROM TOUR)
+			AND D.DATE =  #{date}
+			AND S.TOUR_NO= #{tour_no};
+	</select>
+
+	<!--선택좌석 이용가능한지 확인  -->
+	<select id="selectSeatCheck" resultType="com.erp.app.dto.TourDTO" >
+		SELECT S.NO, S.TOUR_NO, S.DATE_NO, D.DATE, S.ORDER_TYPE, T.PRICE
+		FROM TOUR_SEAT S , TOUR_DATE D, TOUR T
+		WHERE S.DATE_NO = D.NO
+			AND T.NO = S.TOUR_NO
+			AND S.TOUR_NO = D.TOUR_NO
+			AND S.NO = #{seat_no}
+			AND S.TOUR_NO = #{no}
+			AND D.DATE = #{date}
+			
+	</select>
+	<!--해당좌석 order_type 업데이트 -->
+	<update id="updateOrederType" parameterType="com.erp.app.dto.TourDTO">
+		UPDATE TOUR_SEAT SET ORDER_TYPE='T'
+		WHERE TOUR_NO = #{no}
+			AND NO = #{seat_no}
+			AND DATE_NO = (SELECT NO 
+							FROM TOUR_DATE
+							WHERE DATE= #{date}
+								AND TOUR_NO= #{no})
+	</update>
+	<!--format(getdate(),'yyyyMMddHHmmss')  -->
+	<!-- 결제 -->
+	<insert id="insertOrder" parameterType="com.erp.app.dto.TourDTO">
+		INSERT INTO TOUR_ORDER(			
+				NO,
+				TOUR_NO,
+				DATE_NO,
+				SEAT_NO,
+				MEMBER_NO,
+				NAME,
+				BIRTH,
+				PASSPORT,
+				FIRSTNAME,
+				LASTNAME,
+				PHONE,
+				EMAIL,
+				MAKE_TIME)
+			VALUES(
+				format(getDate(),'yyyyMMddHHmmss'),
+				#{tour_no},
+				#{date_no},
+				#{seat_no},
+				#{member_no},
+				#{name},
+				#{birth},
+				#{passport},
+				#{first_name},
+				#{last_name},
+				#{phone},
+				#{email},
+				getDate())
+	</insert>
+</mapper>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="profile">
+
+	<update id="updateProfile" parameterType="com.erp.app.dto.MemberDTO">
+			 UPDATE MEMBER
+			    SET BIRTH = #{Birth}
+			      , EMAIL = #{Email}
+		          , ADDRESS1 = #{Address1}
+		          , ADDRESS2 = #{Address2}
+			      , ZIPCODE = #{ZipCode}
+			      
+	    <if test="Password != null and Password != ''">
+                  , PASSWORD = #{Password}
+        </if>
+			  WHERE ID = #{Id}
+    </update>  
+</mapper>

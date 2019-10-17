@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="notice">
+
+
+	<!-- 공지사항 전체 글 select -->
+	<select id="selectNotice" resultType="com.erp.app.dto.NoticeDTO" >
+	SELECT A.NO, 
+			A.SUBJECT, 
+			A.CONTENTS, 
+			A.MEMBER_NO, 
+			A.MAKE_DATE, 
+			A.UPDATE_DATE, 
+			A.VIEW_COUNT,
+			(SELECT COUNT(*) FROM REPLY WHERE NO = A.NO) AS REPLY_CNT
+	FROM(
+			select ROW_NUMBER() OVER (ORDER BY NO DESC) AS ROW_NUM,*
+			FROM NOTICE) A
+	WHERE <![CDATA[A.ROW_NUM > ]]> 20 * (#{curPage} -1)
+		AND <![CDATA[A.ROW_NUM <=  ]]>20 * #{curPage}
+	</select>
+
+
+ 	<select id="selectNoticeCnt" resultType="java.lang.Integer" >   
+    SELECT ( CASE
+          WHEN COUNT(*) % 20 > 0 THEN (COUNT(*) / 20) + 1
+          ELSE COUNT(*) / 20 END ) CNT
+    FROM NOTICE 
+    
+    </select>
+
+	<select id="selectNoticeView" resultType="com.erp.app.dto.NoticeDTO" >
+	SELECT  A.NO, 
+			A.SUBJECT, 
+			A.CONTENTS, 
+			B.NAME, 
+			A.MAKE_DATE, 
+			A.UPDATE_DATE, 
+			A.VIEW_COUNT
+	FROM NOTICE A, MEMBER B
+	WHERE A.NO = #{no}
+		AND A.MEMBER_NO= B.NO
+	</select>
+
+	<update id="updateCountView">
+        UPDATE     NOTICE
+        SET     VIEW_COUNT = #{view_count} + 1
+        WHERE     NO = #{no}  
+    </update>
+
+	<!-- 상세 조회 페이지 댓글 목록 -->
+	<select id="selectnoticeReqView" resultType="com.erp.app.dto.NoticeDTO" >
+	SELECT A.NO as req_No, 
+			A.REPLY_NO, 
+			A.TYPE, 
+			A.CONTENTS as req_contents, 
+			A.MEMBER_NO as req_memberNo, 
+			A.MAKE_DATE as req_makeDate, 
+			A.UPDATE_DATE as req_updateDate,
+			B.NAME as req_name
+	FROM REPLY A,  MEMBER B
+	WHERE A.NO = #{no} 
+		AND A.MEMBER_NO= B.NO
+		AND A.TYPE='NOTICE'
+	</select>
+	
+	<!--상세 페이지 댓글 추가 -->	
+	<update id="insertNoticeReq" parameterType="com.erp.app.dto.NoticeDTO">	
+	     MERGE INTO REPLY
+            USING (VALUES (1)) AS SOURCE (Number)
+               ON (TYPE = 'NOTICE' AND REPLY_NO = #{reply_no})
+          
+          WHEN MATCHED THEN 
+         UPDATE SET 
+                CONTENTS = #{req_contents}
+              , UPDATE_DATE = getdate()
+           WHEN NOT MATCHED THEN 
+         INSERT (
+                NO
+              , REPLY_NO
+              , TYPE
+              , CONTENTS
+              , MEMBER_NO
+              , MAKE_DATE
+              , UPDATE_DATE ) 
+         VALUES (
+                #{no}
+              , format(getdate(),'yyyyMMddHHmmss')
+              , 'NOTICE'
+              , #{req_contents}
+              , #{member_no}
+              , getdate()
+              , getdate()
+         );
+    </update>
+         
+	<!-- 상세페이지 댓글 삭제 -->
+	<delete id="deleteNoticeReq" parameterType="com.erp.app.dto.NoticeDTO">	
+		DELETE FROM REPLY
+		WHERE NO = #{no}
+		AND REPLY_NO=#{reply_no}
+		AND MEMBER_NO=#{member_no}
+     </delete>
+     
+     <!--공지사항 글 저장 -->
+     <update id="updateNoticeSave" parameterType="com.erp.app.dto.NoticeDTO">
+        <selectKey keyProperty="no" resultType="Integer" order="BEFORE">
+        	<if test="no==-1">
+        	SELECT (MAX(NO)+1) as no FROM NOTICE
+        	</if>
+        	<if test="no!=-1">
+        	SELECT no FROM NOTICE WHERE NO = #{no}
+        	</if>
+    	</selectKey>
+	       MERGE INTO NOTICE
+            USING (VALUES (1)) AS SOURCE (Number)
+               ON (NO = #{no})
+          
+          WHEN MATCHED THEN 
+         UPDATE SET 
+         		SUBJECT = #{subject}
+              , CONTENTS = #{contents}
+              , UPDATE_DATE = getdate()
+           WHEN NOT MATCHED THEN 
+         INSERT (
+                NO
+              , SUBJECT
+              , CONTENTS
+              , MEMBER_NO
+              , MAKE_DATE
+              , UPDATE_DATE
+			  , VIEW_COUNT ) 
+         VALUES (
+                (SELECT (MAX(NO)+1) FROM NOTICE)
+              , #{subject}
+              , #{contents}
+              , #{member_no}
+              , getdate()
+              , getdate()
+              , 0
+         );
+     </update>
+     
+</mapper>

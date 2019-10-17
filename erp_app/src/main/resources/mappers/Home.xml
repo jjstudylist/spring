@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="home">
+
+    <select id="SelectMember" parameterType="com.erp.app.dto.MemberDTO" resultType="com.erp.app.dto.MemberDTO" >
+    
+	    SELECT NO
+	         , NAME
+	         , ID
+	         , PASSWORD
+	         , GENDER
+	         , EMAIL
+	         , PHONE
+	         , BIRTH
+	         , JOIN_DATE
+	         , LEV
+	         , LAST_LOGIN
+	         , APPROVAL
+	      FROM MEMBER
+	     WHERE 1 = 1
+	     
+	    <if test="Id != null and Id != ''">
+           AND ID = #{Id}
+        </if>
+	    <if test="Email != null and Email != ''">
+           AND EMAIL = #{Email}
+        </if>
+	    <if test="Password != null and Password != ''">
+           AND PASSWORD = #{Password}
+        </if>
+	     
+    </select>
+    
+    
+    <update id="updateLastLogin" parameterType="com.erp.app.dto.MemberDTO">
+    
+	    UPDATE MEMBER
+	       SET LAST_LOGIN = GETDATE()
+	     WHERE ID = #{Id}
+	     
+    </update>
+    
+    <update id="updatePassword" parameterType="com.erp.app.dto.MemberDTO">
+    
+	    UPDATE MEMBER
+	       SET PASSWORD = #{Password}
+	     WHERE ID = #{Id}
+	     
+    </update>
+    
+    <!-- naver 이메일 정보 체크 -->
+    <select id="selectNaverInfo" parameterType="com.erp.app.dto.MemberDTO" resultType="com.erp.app.dto.MemberDTO" >    
+	    SELECT ID
+	         , EMAIL
+	         , JOIN_TYPE
+	      FROM MEMBER
+	     WHERE EMAIL = #{Email}
+    </select>
+    
+    <!-- naver 정보로 자동 회원가입 -->
+    <insert id="insertNaverInfo" parameterType="com.erp.app.dto.MemberDTO">
+    	INSERT INTO MEMBER(
+    			NO,
+    			NAME,
+    			ID,
+    			EMAIL,
+    			JOIN_TYPE,
+    			JOIN_DATE
+    			)
+    	VALUES(
+    		format(GETDATE(),'yyyyMMddHHmmss'),
+    		#{Name},
+    		(SELECT 'SODTOUR_' + REPLICATE('0', 4 - LEN(COUNT(*) + 1)) + CAST(COUNT(*) + 1 AS VARCHAR) AS CNT
+			  FROM MEMBER
+			 WHERE JOIN_TYPE = 'NAVER'),
+			#{Email},
+			'NAVER',
+			GETDATE()
+    		
+    	)
+    			
+    	
+    </insert>
+
+</mapper>
